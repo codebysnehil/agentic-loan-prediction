@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import type { AgentResponse } from "../types";
+import type { AgentResult } from "../types";
 import { TOOL_LABELS } from "../types";
 
 interface Props {
   loading: boolean;
-  result: AgentResponse | null;
+  result: AgentResult | null;
   error: string | null;
   onClose: () => void;
 }
@@ -612,7 +612,7 @@ export const AnalysisModal: React.FC<Props> = ({
     return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
 
-  const decision = result?.decision ?? null;
+  const decision = result ?? null;
   const vm = decision ? V[decision.verdict as keyof typeof V] : null;
 
   const cssVars = vm
@@ -623,7 +623,7 @@ export const AnalysisModal: React.FC<Props> = ({
       } as React.CSSProperties)
     : {};
 
-  const dti = decision ? Math.round(decision.debt_to_income * 100) : 0;
+  const dti = decision ? Math.round(decision.dti_ratio * 100) : 0;
   const dtiNote =
     dti < 35
       ? "Well within limits"
@@ -699,7 +699,7 @@ export const AnalysisModal: React.FC<Props> = ({
             )}
 
             {/* ── RESULT ── */}
-            {!loading && result && decision && vm && (
+            {!loading && decision && vm && (
               <>
                 {/* Hero */}
                 <div className="am-hero">
@@ -714,13 +714,13 @@ export const AnalysisModal: React.FC<Props> = ({
                         {vm.label}
                       </div>
                       <div className="am-verdict-name">
-                        {decision.applicant_name}
+                        {decision.applicant_name ?? "Applicant"}
                       </div>
                       <div className="am-verdict-who">Loan Applicant</div>
                     </div>
                     <div className="am-verdict-right">
                       <div className="am-verdict-amt">
-                        {fmtINR(decision.requested_loan)}
+                        {fmtINR(decision.requested_loan ?? 0)}
                       </div>
                       <div className="am-verdict-amt-sub">
                         Requested Principal
@@ -801,7 +801,7 @@ export const AnalysisModal: React.FC<Props> = ({
                         <span className="am-detail-key">Monthly EMI</span>
                         <span className="am-detail-val">
                           <strong>
-                            {fmtINR(decision.monthly_emi_estimate)}
+                            {fmtINR(decision.new_emi_estimate)}
                           </strong>
                           <span className="am-detail-note">/ month</span>
                         </span>
@@ -820,11 +820,11 @@ export const AnalysisModal: React.FC<Props> = ({
                           <span className="am-detail-note">— {dtiNote}</span>
                         </span>
                       </div>
-                      {(decision as any).available_lenders?.length > 0 && (
+                      {decision.available_lenders?.length > 0 && (
                         <div className="am-detail-row">
                           <span className="am-detail-key">Lenders</span>
                           <div className="am-chips">
-                            {(decision as any).available_lenders.map(
+                            {decision.available_lenders.map(
                               (l: string) => (
                                 <span className="am-chip" key={l}>
                                   {l}
@@ -860,7 +860,7 @@ export const AnalysisModal: React.FC<Props> = ({
                 {/* Trace tab */}
                 {tab === "trace" && (
                   <div className="am-trace">
-                    {result.steps.map((step, i) => {
+                    {decision.steps.map((step, i) => {
                       const cfg = TOOL_LABELS[step.tool] ?? {
                         label: step.tool,
                       };
