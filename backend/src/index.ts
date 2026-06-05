@@ -1,43 +1,81 @@
 import "dotenv/config";
-import express, { Request, Response } from "express";
+import { validateEnv } from "./lib/env";
+import { logger } from "./lib/logger";
+
+// Fail fast before importing anything that needs env vars
+validateEnv();
+
+import express from "express";
 import cors from "cors";
-import { runLoanAgent } from "./agent";
-import type { LoanApplicationInput } from "./types";
+import helmet from "helmet";
+import morgan from "morgan";
+import { initDb, closeDb, pool } from "./db/client";
+import { connectMongo, closeMongo } from "./db/mongo";
+import { connectRabbitMQ, closeRabbitMQ } from "./queue/connection";
+import { startWorker } from "./queue/worker";
+import loanRoutes from "./routes/loan.routes";
 
 const app = express();
-app.use(cors());
+
+app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
 app.use(express.json());
-
-app.post(
-  "/api/analyze",
-  async (req: Request<object, object, Partial<LoanApplicationInput>>, res: Response) => {
-    const { name, monthly_income, existing_emis, requested_loan, tenure_months, purpose } = req.body;
-
-    if (!name || !monthly_income || !requested_loan || !tenure_months || !purpose) {
-      res.status(400).json({ error: "Missing required fields" });
-      return;
-    }
-
-    try {
-      console.log(`\n🚀 Starting agent for: ${name}`);
-      const result = await runLoanAgent({
-        name,
-        monthly_income:  Number(monthly_income),
-        existing_emis:   Number(existing_emis ?? 0),
-        requested_loan:  Number(requested_loan),
-        tenure_months:   Number(tenure_months),
-        purpose,
-      });
-      res.json(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.error("Agent error:", message);
-      res.status(500).json({ error: message });
-    }
-  }
+app.use(
+  morgan("combined", {
+    stream: { write: (msg: string) => logger.http(msg.trim()) },
+  }),
 );
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.use("/api", loanRoutes);
+
+app.get("/health", async (_req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ status: "ok", db: "connected" });
+  } catch {
+    res.status(503).json({ status: "degraded", db: "unreachable" });
+  }
+});
+
+// Unhandled errors — never leak stack traces to clients
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    logger.error("Unhandled error", { error: err.message, stack: err.stack });
+    res.status(500).json({ error: "Internal server error" });
+  },
+);
 
 const PORT = Number(process.env.PORT ?? 3001);
-app.listen(PORT, () => console.log(`✅ Backend on http://localhost:${PORT}`));
+let server: ReturnType<typeof app.listen>;
+
+Promise.all([initDb(), connectMongo(), connectRabbitMQ()])
+  .then(() => {
+    startWorker();
+    server = app.listen(PORT, () =>
+      logger.info(`Backend running`, { port: PORT }),
+    );
+  })
+  .catch((err) => {
+    logger.error("Failed to initialise databases", { error: err.message });
+    process.exit(1);
+  });
+
+// Graceful shutdown — drains in-flight requests before killing the process
+async function shutdown(signal: string): Promise<void> {
+  logger.info(`${signal} received — shutting down`);
+  server?.close(async () => {
+    await Promise.all([closeDb(), closeMongo(), closeRabbitMQ()]);
+    logger.info("Shutdown complete");
+    process.exit(0);
+  });
+  // Force exit if drain takes too long
+  setTimeout(() => process.exit(1), 10_000);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
