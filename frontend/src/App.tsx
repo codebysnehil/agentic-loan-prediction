@@ -71,7 +71,7 @@ const DEFAULT_TENURE: Record<string, string> = {
 const INITIAL_FORM: LoanFormData = {
   name: "",
   monthly_income: "",
-  monthly_emi: "",
+  existing_emis: "",
   requested_loan: "",
   tenure_months: "60",
   purpose: "personal",
@@ -811,7 +811,7 @@ export default function App(): React.ReactElement {
       [
         form.name,
         form.monthly_income,
-        form.monthly_emi,
+        form.existing_emis,
         form.requested_loan,
       ].filter(Boolean).length,
     );
@@ -840,7 +840,7 @@ export default function App(): React.ReactElement {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setModalOpen(true);
-    await analyze({ ...form, custom_rate: String(effectiveRate) });
+    await analyze(form);
   };
 
   return (
@@ -1038,18 +1038,17 @@ export default function App(): React.ReactElement {
                   <div className="f-hint">{fmt(form.monthly_income)}</div>
                 </div>
                 <div className="f">
-                  <div className="f-lbl">EMI Capacity</div>
+                  <div className="f-lbl">Existing EMIs</div>
                   <div className="f-box">
                     <span className="fpx">₹</span>
                     <input
                       type="number"
-                      placeholder="50,000"
-                      value={form.monthly_emi}
-                      onChange={handle("monthly_emi")}
-                      required
+                      placeholder="0"
+                      value={form.existing_emis}
+                      onChange={handle("existing_emis")}
                     />
                   </div>
-                  <div className="f-hint">{fmt(form.monthly_emi)}</div>
+                  <div className="f-hint">{fmt(form.existing_emis)}</div>
                 </div>
               </div>
 
