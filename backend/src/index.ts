@@ -2,7 +2,6 @@ import "dotenv/config";
 import { validateEnv } from "./lib/env";
 import { logger } from "./lib/logger";
 
-// Fail fast before importing anything that needs env vars
 validateEnv();
 
 import express from "express";
@@ -37,7 +36,6 @@ app.get("/health", async (_req, res) => {
   }
 });
 
-// Unhandled errors — never leak stack traces to clients
 app.use(
   (
     err: Error,
@@ -57,7 +55,7 @@ Promise.all([initDb(), connectMongo(), connectRabbitMQ()])
   .then(() => {
     startWorker();
     server = app.listen(PORT, () =>
-      logger.info(`Backend running`, { port: PORT }),
+      logger.info("Backend running", { port: PORT }),
     );
   })
   .catch((err) => {
@@ -65,7 +63,6 @@ Promise.all([initDb(), connectMongo(), connectRabbitMQ()])
     process.exit(1);
   });
 
-// Graceful shutdown — drains in-flight requests before killing the process
 async function shutdown(signal: string): Promise<void> {
   logger.info(`${signal} received — shutting down`);
   server?.close(async () => {
@@ -73,7 +70,6 @@ async function shutdown(signal: string): Promise<void> {
     logger.info("Shutdown complete");
     process.exit(0);
   });
-  // Force exit if drain takes too long
   setTimeout(() => process.exit(1), 10_000);
 }
 

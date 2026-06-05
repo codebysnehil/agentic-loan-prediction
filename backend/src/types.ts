@@ -7,8 +7,6 @@ export interface LoanApplicationInput {
   purpose: string;
 }
 
-// ── Tool I/O ──────────────────────────────────────────────────────────────────
-
 export interface CalculateDTIInput {
   monthly_income: number;
   existing_emis: number;
@@ -51,8 +49,6 @@ export interface RecommendLenderOutput {
   solar_subsidy_applicable: boolean;
 }
 
-// ── Agent ──────────────────────────────────────────────────────────────────────
-
 export interface AgentStep {
   tool: string;
   input: Record<string, unknown>;
@@ -73,8 +69,6 @@ export interface AgentResult {
   summary: string;
   steps: AgentStep[];
 }
-
-// ── DB row ─────────────────────────────────────────────────────────────────────
 
 export type ApplicationStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
