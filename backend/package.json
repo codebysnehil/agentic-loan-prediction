@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "ts-node src/index.ts",
     "dev": "ts-node src/index.ts",
     "build": "tsc"
@@ -15,15 +16,28 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
     "@google/generative-ai": "^0.24.1",
+    "amqplib": "^2.0.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "helmet": "^8.2.0",
+    "mongoose": "^8.24.0",
+    "morgan": "^1.11.0",
+    "pg": "^8.21.0",
+    "uuid": "^14.0.0",
+    "winston": "^3.19.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.8",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/morgan": "^1.9.10",
     "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
+    "@types/uuid": "^10.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.6"
   }
 }
